@@ -27,9 +27,9 @@
 
         h1 {
             text-align: center;
-            font-size: 3.5rem;
+            font-size: 3rem;
             font-weight: 700;
-            margin-bottom: 50px;
+            margin-bottom: 20px;
             background: linear-gradient(45deg, #ffd700, #ffa500, #ff8c00);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -40,19 +40,24 @@
         .days-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 25px;
-            padding: 20px;
+            gap: 15px;
+            padding: 10px;
+            max-height: calc(100vh - 120px);
         }
 
         .day-card {
             background: rgba(255, 255, 255, 0.05);
             border: 2px solid rgba(255, 165, 0, 0.3);
             border-radius: 20px;
-            padding: 25px 20px;
+            padding: 15px 12px;
             text-align: center;
             transition: all 0.3s ease;
             position: relative;
             backdrop-filter: blur(10px);
+        }
+
+        .day-card.shabbat {
+            background: rgba(75, 0, 130, 0.3);
         }
 
         .day-card:hover {
@@ -72,19 +77,19 @@
             justify-content: center;
             align-items: center;
             gap: 10px;
-            margin-bottom: 15px;
-            font-size: 1.8rem;
+            margin-bottom: 10px;
+            font-size: 1.5rem;
         }
 
         .hebrew-name {
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             font-weight: 600;
             color: #ffd700;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
         }
 
         .english-name {
-            font-size: 1.2rem;
+            font-size: 1rem;
             font-weight: 400;
             color: #ffa500;
             opacity: 0.9;
@@ -92,9 +97,9 @@
 
         .star-of-david {
             position: absolute;
-            top: -20px;
-            right: -20px;
-            font-size: 3.5rem;
+            top: -15px;
+            right: -15px;
+            font-size: 2.5rem;
             animation: pulse 2s ease-in-out infinite;
         }
 
@@ -236,7 +241,7 @@
             currentHebrewDay = getCurrentHebrewDay();
             
             grid.innerHTML = days.map(day => `
-                <div class="day-card ${day.index === currentHebrewDay ? 'current' : ''}">
+                <div class="day-card ${day.index === currentHebrewDay ? 'current' : ''} ${day.index === 6 ? 'shabbat' : ''}">
                     ${day.index === currentHebrewDay ? '<div class="star-of-david">✡️</div>' : ''}
                     <div class="cycle-icons">
                         <span>🌙</span>
