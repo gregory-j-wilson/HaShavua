@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HaShavua</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #ffa500;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 50px;
+            background: linear-gradient(45deg, #ffd700, #ffa500, #ff8c00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+        }
+
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 25px;
+            padding: 20px;
+        }
+
+        .day-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 165, 0, 0.3);
+            border-radius: 20px;
+            padding: 25px 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            backdrop-filter: blur(10px);
+        }
+
+        .day-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 215, 0, 0.6);
+            box-shadow: 0 10px 30px rgba(255, 165, 0, 0.2);
+        }
+
+        .day-card.current {
+            border: 3px solid #ffd700;
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.4);
+            background: rgba(255, 215, 0, 0.1);
+        }
+
+        .cycle-icons {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            font-size: 1.8rem;
+        }
+
+        .hebrew-name {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #ffd700;
+            margin-bottom: 8px;
+        }
+
+        .english-name {
+            font-size: 1.2rem;
+            font-weight: 400;
+            color: #ffa500;
+            opacity: 0.9;
+        }
+
+        .star-of-david {
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            font-size: 3.5rem;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                filter: drop-shadow(0 0 10px #ffd700);
+            }
+            50% {
+                transform: scale(1.1);
+                filter: drop-shadow(0 0 20px #ffd700);
+            }
+        }
+
+        .info-bar {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            background: rgba(255, 165, 0, 0.1);
+            border-radius: 15px;
+            color: #ffa500;
+        }
+
+        .info-bar p {
+            margin: 5px 0;
+            font-size: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+            
+            .days-grid {
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HaShavua</h1>
+        <div class="days-grid" id="daysGrid"></div>
+        <div class="info-bar">
+            <p id="sunsetInfo">Loading sunset time...</p>
+            <p id="nextDayInfo"></p>
+        </div>
+    </div>
+
+    <script>
+        const days = [
+            { hebrew: 'יום ראשון', english: 'Sunday', index: 0 },
+            { hebrew: 'יום שני', english: 'Monday', index: 1 },
+            { hebrew: 'יום שלישי', english: 'Tuesday', index: 2 },
+            { hebrew: 'יום רביעי', english: 'Wednesday', index: 3 },
+            { hebrew: 'יום חמישי', english: 'Thursday', index: 4 },
+            { hebrew: 'יום שישי', english: 'Friday', index: 5 },
+            { hebrew: 'שבת', english: 'Shabbat', index: 6 }
+        ];
+
+        let sunsetTime = null;
+        let currentHebrewDay = null;
+        let notificationPermission = false;
+
+        async function requestNotificationPermission() {
+            if ('Notification' in window && Notification.permission === 'default') {
+                const permission = await Notification.requestPermission();
+                notificationPermission = permission === 'granted';
+            } else if (Notification.permission === 'granted') {
+                notificationPermission = true;
+            }
+        }
+
+        function showNotification(title, body) {
+            if (notificationPermission && 'Notification' in window) {
+                new Notification(title, {
+                    body: body,
+                    icon: '✡️',
+                    badge: '✡️'
+                });
+            }
+        }
+
+        async function getSunsetTime() {
+            try {
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject);
+                });
+
+                const { latitude, longitude } = position.coords;
+                const response = await fetch(
+                    `https://api.sunrise-sunset.org/json?lat=${latitude}&lng=${longitude}&formatted=0`
+                );
+                const data = await response.json();
+                
+                if (data.status === 'OK') {
+                    sunsetTime = new Date(data.results.sunset);
+                    updateSunsetInfo();
+                    return sunsetTime;
+                }
+            } catch (error) {
+                console.error('Error getting sunset time:', error);
+                document.getElementById('sunsetInfo').textContent = 
+                    'Unable to get sunset time. Using midnight for day changes.';
+            }
+            return null;
+        }
+
+        function getCurrentHebrewDay() {
+            const now = new Date();
+            let dayIndex = now.getDay();
+            
+            if (sunsetTime && now >= sunsetTime) {
+                dayIndex = (dayIndex + 1) % 7;
+            }
+            
+            return dayIndex;
+        }
+
+        function updateSunsetInfo() {
+            if (sunsetTime) {
+                const timeStr = sunsetTime.toLocaleTimeString('en-US', { 
+                    hour: 'numeric', 
+                    minute: '2-digit',
+                    hour12: true 
+                });
+                document.getElementById('sunsetInfo').textContent = 
+                    `Today's sunset: ${timeStr}`;
+                
+                const nextDay = days[(getCurrentHebrewDay() + 1) % 7];
+                document.getElementById('nextDayInfo').textContent = 
+                    `Next Hebrew day (${nextDay.hebrew}) begins at sunset`;
+            }
+        }
+
+        function renderDays() {
+            const grid = document.getElementById('daysGrid');
+            currentHebrewDay = getCurrentHebrewDay();
+            
+            grid.innerHTML = days.map(day => `
+                <div class="day-card ${day.index === currentHebrewDay ? 'current' : ''}">
+                    ${day.index === currentHebrewDay ? '<div class="star-of-david">✡️</div>' : ''}
+                    <div class="cycle-icons">
+                        <span>🌙</span>
+                        <span>☀️</span>
+                    </div>
+                    <div class="hebrew-name">${day.hebrew}</div>
+                    <div class="english-name">${day.english}</div>
+                </div>
+            `).join('');
+        }
+
+        function checkDayChange() {
+            const newHebrewDay = getCurrentHebrewDay();
+            
+            if (currentHebrewDay !== null && newHebrewDay !== currentHebrewDay) {
+                const newDay = days[newHebrewDay];
+                showNotification(
+                    '🌙 New Hebrew Day!',
+                    `${newDay.hebrew} (${newDay.english}) has begun`
+                );
+                currentHebrewDay = newHebrewDay;
+                renderDays();
+            }
+        }
+
+        async function init() {
+            await requestNotificationPermission();
+            await getSunsetTime();
+            renderDays();
+            
+            setInterval(checkDayChange, 30000);
+            
+            setInterval(async () => {
+                await getSunsetTime();
+            }, 3600000);
+        }
+
+        init();
+    </script>
+</body>
+</html>
