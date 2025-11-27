@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HaShavua</title>
-    <link rel="icon" type="image/png" href="/coin.png">
-
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -32,7 +30,7 @@
             font-size: 3rem;
             font-weight: 700;
             margin-bottom: 20px;
-            background: linear-gradient(45deg, #ffe553, #ffa500, #ff8c00);
+            background: linear-gradient(45deg, #ffe864, #ffa500, #ff6200);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -166,6 +164,7 @@
         let sunsetTime = null;
         let currentHebrewDay = null;
         let notificationPermission = false;
+        let hasCrossedSunset = false; // Track if we've crossed today's sunset
 
         async function requestNotificationPermission() {
             if ('Notification' in window && Notification.permission === 'default') {
@@ -199,7 +198,17 @@
                 const data = await response.json();
                 
                 if (data.status === 'OK') {
-                    sunsetTime = new Date(data.results.sunset);
+                    const newSunset = new Date(data.results.sunset);
+                    const now = new Date();
+                    
+                    // If we're getting new sunset data and it's in the future, reset the flag
+                    if (newSunset > now) {
+                        hasCrossedSunset = false;
+                    } else {
+                        hasCrossedSunset = true;
+                    }
+                    
+                    sunsetTime = newSunset;
                     updateSunsetInfo();
                     return sunsetTime;
                 }
@@ -215,7 +224,8 @@
             const now = new Date();
             let dayIndex = now.getDay();
             
-            if (sunsetTime && now >= sunsetTime) {
+            // If we've crossed sunset, we're in the next Hebrew day
+            if (hasCrossedSunset) {
                 dayIndex = (dayIndex + 1) % 7;
             }
             
@@ -256,9 +266,12 @@
         }
 
         function checkDayChange() {
-            const newHebrewDay = getCurrentHebrewDay();
+            const now = new Date();
             
-            if (currentHebrewDay !== null && newHebrewDay !== currentHebrewDay) {
+            // Check if we just crossed sunset
+            if (sunsetTime && !hasCrossedSunset && now >= sunsetTime) {
+                hasCrossedSunset = true;
+                const newHebrewDay = getCurrentHebrewDay();
                 const newDay = days[newHebrewDay];
                 showNotification(
                     '🌙 New Hebrew Day!',
@@ -276,9 +289,20 @@
             
             setInterval(checkDayChange, 30000);
             
-            setInterval(async () => {
-                await getSunsetTime();
-            }, 3600000);
+            // Refresh sunset data at midnight to get new day's sunset
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 1, 0, 0); // 12:01 AM
+            const msUntilMidnight = tomorrow - now;
+            
+            setTimeout(() => {
+                getSunsetTime().then(() => renderDays());
+                setInterval(async () => {
+                    await getSunsetTime();
+                    renderDays();
+                }, 86400000); // Every 24 hours
+            }, msUntilMidnight);
         }
 
         init();
