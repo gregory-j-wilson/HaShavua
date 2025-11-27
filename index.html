@@ -193,23 +193,32 @@
                 });
 
                 const { latitude, longitude } = position.coords;
+                const now = new Date();
+                
+                // Get local date string (not UTC)
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const dateStr = `${year}-${month}-${day}`;
+                
+                console.log('Fetching sunset for date:', dateStr);
+                
                 const response = await fetch(
-                    `https://api.sunrise-sunset.org/json?lat=${latitude}&lng=${longitude}&formatted=0`
+                    `https://api.sunrise-sunset.org/json?lat=${latitude}&lng=${longitude}&date=${dateStr}&formatted=0`
                 );
                 const data = await response.json();
                 
                 if (data.status === 'OK') {
-                    const newSunset = new Date(data.results.sunset);
-                    const now = new Date();
+                    sunsetTime = new Date(data.results.sunset);
                     
-                    // If we're getting new sunset data and it's in the future, reset the flag
-                    if (newSunset > now) {
-                        hasCrossedSunset = false;
-                    } else {
-                        hasCrossedSunset = true;
-                    }
+                    console.log('API returned sunset:', data.results.sunset);
+                    console.log('Parsed sunset time:', sunsetTime.toString());
+                    console.log('Current time:', now.toString());
+                    console.log('Now >= Sunset?', now >= sunsetTime);
                     
-                    sunsetTime = newSunset;
+                    // Determine if we've crossed TODAY's sunset
+                    hasCrossedSunset = now >= sunsetTime;
+                    
                     updateSunsetInfo();
                     return sunsetTime;
                 }
@@ -311,11 +320,12 @@
             const msUntilMidnight = tomorrow - now;
             
             setTimeout(() => {
+                // At midnight, fetch the new day's sunset and re-evaluate
                 getSunsetTime().then(() => renderDays());
                 setInterval(async () => {
                     await getSunsetTime();
                     renderDays();
-                }, 86400000); // Every 24 hours
+                }, 86400000); // Every 24 hours at midnight
             }, msUntilMidnight);
         }
 
