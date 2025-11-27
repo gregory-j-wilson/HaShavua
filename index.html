@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HaShavua</title>
+    <link rel="icon" type="image/png" href="/coin.png">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -30,7 +31,7 @@
             font-size: 3rem;
             font-weight: 700;
             margin-bottom: 20px;
-            background: linear-gradient(45deg, #ffe864, #ffa500, #ff6200);
+            background: linear-gradient(45deg, #ffd700, #ffa500, #ff8c00);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -222,14 +223,15 @@
 
         function getCurrentHebrewDay() {
             const now = new Date();
-            let dayIndex = now.getDay();
+            let civilDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
             
-            // If we've crossed sunset, we're in the next Hebrew day
+            // Simple rule: if we've crossed today's sunset, the Hebrew day is tomorrow's civil day
             if (hasCrossedSunset) {
-                dayIndex = (dayIndex + 1) % 7;
+                return (civilDay + 1) % 7;
             }
             
-            return dayIndex;
+            // Otherwise, Hebrew day matches civil day
+            return civilDay;
         }
 
         function updateSunsetInfo() {
@@ -239,18 +241,30 @@
                     minute: '2-digit',
                     hour12: true 
                 });
+                const now = new Date();
+                const status = hasCrossedSunset ? '(passed)' : '(upcoming)';
                 document.getElementById('sunsetInfo').textContent = 
-                    `Today's sunset: ${timeStr}`;
+                    `Today's sunset: ${timeStr} ${status}`;
                 
                 const nextDay = days[(getCurrentHebrewDay() + 1) % 7];
                 document.getElementById('nextDayInfo').textContent = 
-                    `Next Hebrew day (${nextDay.hebrew}) begins at sunset`;
+                    `Next Hebrew day (${nextDay.hebrew}) begins at ${hasCrossedSunset ? "tomorrow's" : "today's"} sunset`;
             }
         }
 
         function renderDays() {
             const grid = document.getElementById('daysGrid');
             currentHebrewDay = getCurrentHebrewDay();
+            
+            // Debug logging
+            const now = new Date();
+            console.log('=== DEBUG INFO ===');
+            console.log('Current time:', now.toString());
+            console.log('Civil day:', now.getDay(), '=', days[now.getDay()].english);
+            console.log('Sunset time:', sunsetTime ? sunsetTime.toString() : 'null');
+            console.log('Has crossed sunset:', hasCrossedSunset);
+            console.log('Calculated Hebrew day:', currentHebrewDay, '=', days[currentHebrewDay].english);
+            console.log('==================');
             
             grid.innerHTML = days.map(day => `
                 <div class="day-card ${day.index === currentHebrewDay ? 'current' : ''} ${day.index === 6 ? 'shabbat' : ''}">
